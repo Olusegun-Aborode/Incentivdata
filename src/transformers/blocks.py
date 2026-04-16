@@ -69,4 +69,11 @@ def normalize_blocks(blocks: List[Dict[str, Any]], chain: str) -> pd.DataFrame:
         return pd.DataFrame(columns=BLOCK_SCHEMA.columns.keys())
 
     df = pd.DataFrame(rows)
+
+    # Ensure nullable string columns are typed correctly for Pandera
+    for col in ["nonce", "sha3_uncles", "logs_bloom", "transactions_root",
+                "state_root", "receipts_root", "extra_data"]:
+        if col in df.columns:
+            df[col] = df[col].astype("string")
+
     return BLOCK_SCHEMA.validate(df)

@@ -7,12 +7,12 @@ on:
 
 concurrency:
   group: incentiv-sync
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 13
 
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +27,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run catch-up sync
-        run: python3 -u scripts/resilient_sync.py --catch-up-only --batch-size 50
+      - name: Run catch-up sync (max 10 min)
+        run: |
+          timeout 600 python3 -u scripts/resilient_sync.py --catch-up-only --batch-size 50 || true
         env:
           INCENTIV_BLOCKSCOUT_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_URL }}
           INCENTIV_BLOCKSCOUT_RPC_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_RPC_URL }}
@@ -38,6 +39,7 @@ jobs:
         run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
+          git pull --rebase origin main || true
           git add state.json
           git diff --cached --quiet || git commit -m "chore: update sync state [skip ci]"
-          git push
+          git push || true

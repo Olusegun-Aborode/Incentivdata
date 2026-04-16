@@ -1,0 +1,43 @@
+name: Incentiv Sync
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: incentiv-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run catch-up sync
+        run: python3 -u scripts/resilient_sync.py --catch-up-only --batch-size 50
+        env:
+          INCENTIV_BLOCKSCOUT_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_URL }}
+          INCENTIV_BLOCKSCOUT_RPC_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_RPC_URL }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+      - name: Commit updated state
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add state.json
+          git diff --cached --quiet || git commit -m "chore: update sync state [skip ci]"
+          git push

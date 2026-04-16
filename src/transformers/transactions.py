@@ -17,9 +17,10 @@ TRANSACTION_SCHEMA = pa.DataFrameSchema(
         "to_address": Column(str, Check.str_matches(r"^0x[a-f0-9]{40}$"), nullable=True),
         "value": Column(str), # Keep as string for Dune large numbers
         "gas": Column(int, Check.ge(0)),
+        "gas_used": Column("Int64", nullable=True),
         "gas_price": Column(str), # Keep as string
         "input": Column(str, nullable=True),
-        "status": Column("Int64", nullable=True), # From receipt
+        "status": Column("Int64", nullable=True), # From receipt or tx
         "block_hash": Column(str, Check.str_matches(r"^0x[a-fA-F0-9]{64}$")),
         "chain": Column(str),
         "extracted_at": Column("datetime64[ns]"),
@@ -45,9 +46,21 @@ def normalize_transactions(
             
             tx_hash = tx["hash"].lower()
             receipt = receipts.get(tx_hash)
-            # 0x1 usually means success
-            status = int(receipt["status"], 16) if receipt and "status" in receipt else None
-            
+            # Status from receipt (RPC path) or from tx itself (REST v2 path)
+            if receipt and "status" in receipt:
+                status = int(receipt["status"], 16)
+            elif "status" in tx:
+                status = int(tx["status"], 16)
+            else:
+                status = None
+
+            # gas_used from receipt (RPC) or from tx (REST v2)
+            gas_used = None
+            if receipt and "gasUsed" in receipt:
+                gas_used = int(receipt["gasUsed"], 16)
+            elif "gasUsed" in tx:
+                gas_used = int(tx["gasUsed"], 16)
+
             rows.append(
                 {
                     "block_number": block_number,
@@ -59,6 +72,7 @@ def normalize_transactions(
                     "to_address": tx["to"].lower() if tx.get("to") else None,
                     "value": str(int(tx.get("value", "0x0"), 16)),
                     "gas": int(tx.get("gas", "0x0"), 16),
+                    "gas_used": gas_used,
                     "gas_price": str(int(tx.get("gasPrice", "0x0"), 16)),
                     "input": tx.get("input", "0x"),
                     "status": status,
@@ -73,4 +87,5 @@ def normalize_transactions(
         
     df = pd.DataFrame(rows)
     df['status'] = df['status'].astype("Int64")
+    df['gas_used'] = df['gas_used'].astype("Int64")
     return TRANSACTION_SCHEMA.validate(df)

@@ -24,15 +24,15 @@ export async function GET(request: Request) {
           from_address,
           to_address,
           value,
-          gas_used,
+          COALESCE(gas_used, gas, 0) as gas_used,
           gas_price,
-          status,
+          COALESCE(NULLIF(status, ''), '1') as status,
           hash
         FROM transactions
         ORDER BY block_number DESC
         LIMIT $1 OFFSET $2`,
         [limit, offset],
-        `activity_txs_p${page}`,
+        `activity_txs_v2_p${page}`,
         CACHE_TTLS.RECENT
       ),
 

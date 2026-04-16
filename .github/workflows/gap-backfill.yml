@@ -1,0 +1,33 @@
+name: Block Gap Backfill
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: gap-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Backfill missing block gap
+        run: python3 -u scripts/backfill_gap_range.py --from-block 1730299 --to-block 2041706 --batch-size 25
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          INCENTIV_BLOCKSCOUT_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_URL }}
+          INCENTIV_BLOCKSCOUT_RPC_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_RPC_URL }}

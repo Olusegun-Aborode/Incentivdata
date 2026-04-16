@@ -1,0 +1,33 @@
+name: Gas Backfill
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: gas-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Backfill gas_used (5000 rows)
+        run: python3 -u scripts/backfill_gas_status.py --limit 5000
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          INCENTIV_BLOCKSCOUT_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_URL }}
+          INCENTIV_BLOCKSCOUT_RPC_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_RPC_URL }}

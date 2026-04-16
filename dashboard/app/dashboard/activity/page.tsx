@@ -114,12 +114,15 @@ export default function ActivityPage() {
             }},
             { key: 'gas_used', header: 'Gas', align: 'right', render: (r) => {
               const row = r as Record<string, unknown>;
-              return <span className="text-text-muted text-xs">{formatNumber(row.gas_used as string)}</span>;
+              const gas = row.gas_used;
+              // Show '–' if gas_used is null/0 (backfill pending) to avoid showing misleading gas limit
+              return <span className="text-text-muted text-xs">{gas && Number(gas) > 0 ? formatNumber(gas as string) : '–'}</span>;
             }},
             { key: 'status', header: 'Status', render: (r) => {
               const row = r as Record<string, unknown>;
-              const ok = row.status === 1 || row.status === '1';
-              return <span className={ok ? 'badge-success' : 'badge-fail'}>{ok ? 'OK' : 'FAIL'}</span>;
+              const s = String(row.status ?? '1').toLowerCase();
+              const isFail = s === 'error' || s === 'fail' || s === '0';
+              return <span className={isFail ? 'badge-fail' : 'badge-success'}>{isFail ? 'FAIL' : 'OK'}</span>;
             }},
             { key: 'hash', header: 'Tx Hash', render: (r) => {
               const row = r as Record<string, unknown>;

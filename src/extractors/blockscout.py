@@ -237,8 +237,9 @@ class BlockscoutExtractor:
             unix_ts = 0
 
         # Parse status: REST uses "ok"/"error", RPC uses 0x1/0x0
+        # Only treat explicit "error" as failure; "ok", null, or empty = success
         status_str = tx.get("status", "")
-        status_hex = "0x1" if status_str == "ok" else "0x0"
+        status_hex = "0x0" if status_str == "error" else "0x1"
 
         return {
             "hash": tx_hash.lower(),
@@ -247,6 +248,7 @@ class BlockscoutExtractor:
             "to": to_addr.lower() if to_addr else None,
             "value": hex(int(tx.get("value", "0") or 0)),
             "gas": hex(int(tx.get("gas_limit", 0) or 0)),
+            "gasUsed": hex(int(tx.get("gas_used", 0) or 0)),
             "gasPrice": hex(int(tx.get("gas_price", "0") or 0)),
             "nonce": hex(int(tx.get("nonce", 0) or 0)),
             "transactionIndex": hex(int(tx.get("position", 0) or 0)),

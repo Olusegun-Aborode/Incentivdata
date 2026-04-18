@@ -16,8 +16,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
@@ -34,12 +32,3 @@ jobs:
           INCENTIV_BLOCKSCOUT_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_URL }}
           INCENTIV_BLOCKSCOUT_RPC_URL: ${{ secrets.INCENTIV_BLOCKSCOUT_RPC_URL }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-
-      - name: Commit updated state
-        run: |
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
-          git pull --rebase origin main || true
-          git add -f state.json
-          git diff --cached --quiet || git commit -m "chore: update sync state [skip ci]"
-          git push || true

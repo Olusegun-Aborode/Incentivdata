@@ -75,11 +75,44 @@ class GracefulShutdown:
 
 
 def load_state() -> Dict:
+    """
+    Load state. Neon DB is the source of truth; state.json is a fallback
+    used only if Neon hasn't been initialized yet.
+    """
+    state_from_neon = _load_state_from_neon()
+    state_from_file = {}
     if STATE_FILE.exists():
         try:
-            return json.loads(STATE_FILE.read_text())
+            state_from_file = json.loads(STATE_FILE.read_text())
         except Exception:
-            return {}
+            pass
+
+    # Prefer the higher block number — DB is canonical but file may be ahead
+    # if a previous run wrote the file but failed to update DB
+    neon_block = state_from_neon.get("last_all_activity_block", 0)
+    file_block = state_from_file.get("last_all_activity_block", 0)
+
+    if neon_block >= file_block:
+        return state_from_neon if state_from_neon else state_from_file
+    return state_from_file
+
+
+def _load_state_from_neon() -> Dict:
+    """Load all_activity extraction state from Neon DB."""
+    try:
+        from src.loaders.neon import NeonLoader
+        neon = NeonLoader()
+        try:
+            row = neon.get_extraction_state("all_activity")
+            if row and row.get("last_block_processed") is not None:
+                return {"last_all_activity_block": int(row["last_block_processed"])}
+        finally:
+            try:
+                neon.close()
+            except Exception:
+                pass
+    except Exception:
+        pass
     return {}
 
 

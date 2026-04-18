@@ -40,6 +40,6 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git pull --rebase origin main || true
-          git add state.json
+          git add -f state.json
           git diff --cached --quiet || git commit -m "chore: update sync state [skip ci]"
           git push || true
